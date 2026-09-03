@@ -380,54 +380,7 @@ sequenceDiagram
 ---
 
 
-### 6.2 Tools & Export Classes
 
-```mermaid
-classDiagram
-    class ExportToPt {
-        <<tools/export_to_pt.py>>
-        +ckpt_path: str
-        +pt_output: str
-        +Load .ckpt via LightningModule
-        +Save model.state_dict() as .pt
-    }
-
-    class ExportONNX {
-        <<inference/export_onnx.py>>
-        +Load .pt model
-        +dummy_input: randn(1,3,224,224)
-        +torch.onnx.export()
-        +Output: deepfake_model.onnx
-    }
-
-    class SplitDataset {
-        <<tools/split_dataset.py>>
-        +extract_frames_from_video(path, out_dir, every_n=15)
-        +Read video → save every Nth frame as .jpg
-    }
-
-    class SplitTrainVal {
-        <<tools/split_train_val.py>>
-        +split_dataset(source, dest, ratio=0.8)
-        +Shuffle → 80% train / 20% val
-        +Copy files to train/real, train/fake, etc.
-    }
-
-    class SplitVideoDataset {
-        <<tools/split_video_dataset.py>>
-        +extract_and_split_videos(source, dest, ratio=0.8)
-        +Split videos first, then extract frames
-        +frames_per_video=5, every_n_frames=15
-    }
-
-    ExportToPt ..> DeepfakeDetector : loads checkpoint
-    ExportONNX ..> EfficientNetB0Backbone : exports
-    SplitDataset ..> HybridDeepfakeDataset : prepares data for
-    SplitTrainVal ..> HybridDeepfakeDataset : prepares data for
-    SplitVideoDataset ..> HybridDeepfakeDataset : prepares data for
-```
-
----
 
 ## 7. Activity Diagrams
 
