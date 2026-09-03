@@ -783,3 +783,75 @@ graph TB
 | **Supported Inputs** | .jpg, .jpeg, .png, .mp4, .mov |
 | **Output Classes** | 0 = Real, 1 = Fake |
 
+
+
+
+### QR Code Phishing
+```mermaid
+flowchart TD
+    subgraph CLIENT["🌐 CLIENT (Browser)"]
+        A([User opens Web App]) --> B[Upload QR Code Image<br/>via HTML form]
+        B --> C[JS sends POST request<br/>multipart/form-data]
+    end
+
+    C -->|HTTP POST /scan| D[["🖥️ WEB SERVER (FastAPI)<br/>/scan endpoint"]]
+
+    subgraph SERVER["⚙️ BACKEND PROCESSING PIPELINE"]
+        D --> E[["Stage 1: Decoder Module<br/>pyzbar + OpenCV"]]
+        E -->|Raw payload| F{QR code<br/>decoded?}
+        F -->|No| Z1[/Return error JSON:<br/>'No QR code found'/]
+
+        F -->|Yes, raw URL| G[["Stage 2: Network Module<br/>Follow redirect chain"]]
+        G --> H{Site<br/>reachable?}
+        H -->|Yes| I[/Final resolved URL/]
+        H -->|No/Offline| J[["Extract hostname<br/>from connection error"]]
+        J --> I
+
+        I --> K[["Stage 3: Heuristic Engine<br/>url_inspector.py"]]
+        K --> K1[(8 Rule Checks:<br/>IP, TLD, keywords,<br/>'@', subdomains,<br/>length, //, HTTP)]
+        K1 --> L[/Heuristic Score/]
+
+        I --> M[["Stage 4: Reputation Module<br/>VirusTotal API v3"]]
+        M --> N[("External API:<br/>virustotal.com")]
+        N --> O[/VirusTotal Score<br/>x / 94 engines/]
+
+        L --> P{{Scoring Engine<br/>Combine + Classify}}
+        O --> P
+
+        P --> Q1[🟩 SAFE]
+        P --> Q2[🟧 SUSPICIOUS]
+        P --> Q3[🟥 MALICIOUS]
+    end
+
+    Q1 --> R[["Build JSON Response<br/>verdict, score, reasons"]]
+    Q2 --> R
+    Q3 --> R
+    Z1 --> R
+
+    R -->|HTTP Response| S[Browser receives JSON]
+
+    subgraph CLIENT2["🌐 CLIENT (Browser)"]
+        S --> T[JS renders result card<br/>color-coded verdict]
+        T --> U([User sees result])
+    end
+
+    D -.->|optional: log scan| V[("Database<br/>scan history")]
+
+    classDef endpoint fill:#bbdefb,stroke:#0d47a1,stroke-width:2px,color:#000000
+    classDef process fill:#fff9c4,stroke:#f57f17,stroke-width:2px,color:#000000
+    classDef decision fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#000000
+    classDef data fill:#ffffff,stroke:#616161,stroke-width:1.5px,color:#000000
+    classDef safe fill:#a5d6a7,stroke:#1b5e20,stroke-width:2px,color:#000000
+    classDef suspicious fill:#ffcc80,stroke:#e65100,stroke-width:2px,color:#000000
+    classDef malicious fill:#ef9a9a,stroke:#b71c1c,stroke-width:2px,color:#000000
+    classDef db fill:#d1c4e9,stroke:#4527a0,stroke-width:1.5px,stroke-dasharray: 5 5,color:#000000
+
+    class A,U endpoint
+    class D,E,G,K,M,R process
+    class F,H,P decision
+    class B,C,I,J,K1,L,N,O,S,T,Z1 data
+    class Q1 safe
+    class Q2 suspicious
+    class Q3 malicious
+    class V db
+```
